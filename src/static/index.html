@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+	<title>e-Bike Routing</title>
+
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico" />
+
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.2/dist/leaflet.css" />
+	<script src="https://unpkg.com/leaflet@1.0.2/dist/leaflet.js"></script>
+	<script
+	src="https://code.jquery.com/jquery-3.1.1.min.js"
+	integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
+	crossorigin="anonymous"></script>
+	<script src="https://npmcdn.com/@turf/turf@3.5.1/turf.js"></script>
+
+	<style media="screen">
+	html * {
+		font-size: 1em !important;
+		color: #000 !important;
+		font-family: Arial !important;
+	}
+	.ebike-overlay {
+		position: absolute;
+		right: 20px;
+		top: 20px;
+		z-index: 999;
+	}
+	#cost-box {
+		background-color: white;
+		padding: 16px 24px;
+		-webkit-box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.5);
+		-moz-box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.5);
+		box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.5);
+		border-radius: 3px;
+	}
+	</style>
+</head>
+<body style="width: 100%; height: 100%; position: absolute; margin: 0;">
+
+	<div class="ebike-overlay">
+		<div id="cost-box">
+			Select method:
+			<form id="method-form" action="">
+				<input type="radio" id="method-route" name="method" value="route" checked><label for="method-route">Route</label><br>
+				<input type="radio" id="method-reachability" name="method" value="reachability"><label for="method-reachability">Reachability</label>
+			</form>
+			<label for="capacity">Battery Capacity: </label><input type="number" id="capacity" name="capacity" value="50.0">
+			<br><br>
+			<span id="cost-box-explanation">Please compute a route by clicking on the map!</span>
+		</div>
+	</div>
+
+	<div id="mapid" style="width: 100%; height: 100%;"></div>
+	<script>
+
+	// The map on which we add all elements.
+	var mymap = L.map('mapid').setView([47.3673, 8.55], 13);
+	var mymapelements = [];
+
+	/**
+	* Function that removes all elements from the map.
+	*/
+	function removeAllMapElements() {
+		for(i = 0; i < mymapelements.length; i++) {
+			mymap.removeLayer(mymapelements[i]);
+		}
+		mymapelements = [];
+	}
+
+	/**
+	* Function that adds an element to the map.
+	*/
+	function addToMap(element) {
+		mymapelements.push(element);
+		element.addTo(mymap);
+	}
+
+	/**
+	* Helper function to convert hsv color ramps to rgb.
+	*/
+	var hsv2rgb = function(hsv) {
+		var h = hsv.hue, s = hsv.sat, v = hsv.val;
+		var rgb, i, data = [];
+		if (s === 0) {
+			rgb = [v,v,v];
+		} else {
+			h = h / 60;
+			i = Math.floor(h);
+			data = [v*(1-s), v*(1-s*(h-i)), v*(1-s*(1-(h-i)))];
+			switch(i) {
+				case 0:
+				rgb = [v, data[2], data[0]];
+				break;
+				case 1:
+				rgb = [data[1], v, data[0]];
+				break;
+				case 2:
+				rgb = [data[0], v, data[2]];
+				break;
+				case 3:
+				rgb = [data[0], data[1], v];
+				break;
+				case 4:
+				rgb = [data[2], data[0], v];
+				break;
+				default:
+				rgb = [v, data[0], data[1]];
+				break;
+			}
+		}
+		return '#' + rgb.map(function(x){
+			return ("0" + Math.round(x*255).toString(16)).slice(-2);
+		}).join('');
+	};
+
+	L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoiZG9taW5pay1idWNoZXIiLCJhIjoiSmtVRE85USJ9.4v8qxJHto_hmGEHpgKLfiA', {
+		maxZoom: 18,
+		attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, ' +
+		'<a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +
+		'Imagery © <a href="http://mapbox.com">Mapbox</a>',
+		id: 'mapbox.streets'
+	}).addTo(mymap);
+
+	var clickCount = 0;
+	var start = [];
+	var end = [];
+
+	// Specifies what happens when someone clicks on the map.
+	function onMapClick(e) {
+		// Either, we are in routing mode, where we simply compute and display
+		// routes.
+		if ($('input[name=method]:checked', '#method-form').val() == "route") {
+			if (clickCount == 0) {
+				removeAllMapElements();
+				start = [e.latlng.lng, e.latlng.lat];
+				addToMap(L.marker([e.latlng.lat, e.latlng.lng]));
+
+				clickCount = 1;
+			} else {
+				end = [e.latlng.lng, e.latlng.lat];
+				addToMap(L.marker([e.latlng.lat, e.latlng.lng]));
+				$.get("/api/route?source-lon=" + start[0] +
+				"&source-lat=" + start[1] +
+				"&target-lon=" + end[0] + "&target-lat=" + end[1], function(data) {
+					geoJson = JSON.parse(data);
+					var geoJSONStyle = {
+						color: 'red',
+						weight: 3,
+						opacity: 0.5,
+						smoothFactor: 1
+					};
+
+					addToMap(L.geoJSON(geoJson, { style: geoJSONStyle } ));
+					$('#cost-box-explanation').text("Energy cost of route: " + geoJson.properties.total_cost);
+				});
+
+				clickCount = 0;
+			}
+
+			// Or we are in the reachability mode, where we draw a contour plot
+			// of reachable nodes.
+		} else if ($('input[name=method]:checked', '#method-form').val() == "reachability") {
+			removeAllMapElements();
+			start = [e.latlng.lng, e.latlng.lat];
+			addToMap(L.marker([e.latlng.lat, e.latlng.lng]));
+			var capacity = $('#capacity').val();
+
+			$.get("/api/reachability?source-lon=" + start[0] +
+			"&source-lat=" + start[1] +
+			"&capacity=" + capacity, function(data) {
+				geoJson = JSON.parse(data);
+
+				// Determine max and min capacity, used for coloring later.
+				var maxCapacity = 0;
+				var minCapacity = Infinity;
+				for (i in geoJson.features) {
+					var feature = geoJson.features[i];
+					if (feature.properties.capacity_remaining > maxCapacity) {
+						maxCapacity = feature.properties.capacity_remaining;
+					}
+					if (feature.properties.capacity_remaining < minCapacity) {
+						minCapacity = feature.properties.capacity_remaining;
+					}
+				}
+				// Create 10 equally spaced breaks.
+				var breaks = Array.apply(null, Array(10)).map(function (_, i) {return (minCapacity + i) * (maxCapacity - minCapacity) / 10;});
+				var resolution = 50;
+				var isobands = turf.isolines(geoJson, 'capacity_remaining', resolution, breaks);
+				isobands.features.forEach(function (feature) {
+					var cap_diff = 100 - 100 * (feature.properties.capacity_remaining - minCapacity) / (maxCapacity - minCapacity);
+					var h = Math.floor((100 - cap_diff) * 120 / 100);
+					var s = 1; //Math.abs(cap_diff - 50) / 50;
+					var v = 1;
+					feature.properties["stroke"] = hsv2rgb({hue: h, sat: s, val: v});
+					feature.properties["stroke-width"] = 10;
+					feature.properties["stroke-opacity"] = .5;
+				});
+
+				addToMap(L.geoJSON(isobands, {
+					style: function(feature) {
+						return {
+							color: feature.properties['stroke'],
+							width: feature.properties['stroke-width'],
+							opacity: feature.properties['opacity']
+						};
+					}
+				}));
+			});
+		}
+	}
+
+	mymap.on('click', onMapClick);
+
+	</script>
+
+
+
+</body>
+</html>
