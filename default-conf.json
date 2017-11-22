@@ -1,6 +1,8 @@
 {
   "osm_pbf_file": "data/zuerich.osm.pbf",
-  "dem_file": "../DEM_ZH.tif",
+  "dem_file": "data/DEM_ZH.tif",
+
+  "graph_file": "data/graph.bin.gz",
 
   "db_host": "127.0.0.1",
   "db_port": 5432,

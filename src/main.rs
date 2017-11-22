@@ -40,6 +40,7 @@ mod spatialpoint;
 mod endpoints;
 
 use graph::builder::GraphBuilder;
+use graph::serializer::SerializableGraph;
 use graph::core::Graph;
 use endpoints::GraphPool;
 
@@ -88,19 +89,29 @@ fn build_graph(settings_map: HashMap<String, String>) -> () {
     pb.inc();
 
     let graph = GraphBuilder::build_from_pbf(&mut pbf);
+    let graph_file = settings_map.get("graph_file").unwrap();
+    graph.write_to_file(graph_file);
     println!("Finished building graph.");
 }
 
 /// Exposes a graph to a public HTTP endpoint.
 fn run_server(settings_map: HashMap<String, String>) -> () {
+    println!("Running server");
     // let graph = Graph::new(&args[1]);
-    let graph = Graph::load_from_db(settings_map.get("db_user").unwrap(),
+    /*let graph = Graph::load_from_db(settings_map.get("db_user").unwrap(),
                                    settings_map.get("db_password").unwrap(),
                                    settings_map.get("db_database").unwrap(),
                                    settings_map.get("db_database").unwrap(),
                                    settings_map.get("db_database").unwrap(),
                                    settings_map.get("db_database").unwrap(),
-                                   settings_map.get("db_database").unwrap());
+                                   settings_map.get("db_database").unwrap());*/
+
+    let graph_file = settings_map.get("graph_file").unwrap();
+    println!("Reading from {:?}.", graph_file);
+    let serializable_graph = SerializableGraph::read_from_file(graph_file);
+    println!("Finished reading. Building rtree now.");
+    let graph = serializable_graph.to_graph();
+    println!("Finished importing graph.");
 
     // Setting up the router for the web server.
     let mut router = Router::new();
@@ -118,4 +129,5 @@ fn run_server(settings_map: HashMap<String, String>) -> () {
     let address = [settings_map.get("server_host").unwrap().as_str(),
         settings_map.get("server_port").unwrap()].join(":");
     Iron::new(chain).http(&*address).unwrap();
+    print!("Running server on {:?}", address);
 }

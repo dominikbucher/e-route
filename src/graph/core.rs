@@ -12,26 +12,26 @@ use spatialpoint::SpatialPoint;
 // Inspired by http://codegists.com/snippet/rust/bellmanrs_tristramg_rust.
 
 /// Holds a single node, containing the OSM id, longitude, and latitude.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Node {
     /// The OSM id associated with this node.
-    id: u64,
+    pub id: i64,
     /// The longitude of this node.
-    lon: f32,
+    pub lon: f64,
     /// The latitude of this node.
-    lat: f32,
+    pub lat: f64,
 }
 
 /// Holds a single edge, containing the source node, the target node,
 /// and the edge weight.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Edge {
     /// Where this edge starts.
-    source: usize,
+    pub source: usize,
     /// Where this edge ends.
-    target: usize,
+    pub target: usize,
     /// The weight of this edge.
-    weight: f32,
+    pub weight: f32,
 }
 
 /// Contains a whole graph.
@@ -50,13 +50,13 @@ impl Node {
     fn from_osrm(reader: &mut BufReader<&File>) -> Node {
         let lon = reader.read_i32::<LittleEndian>().unwrap();
         let lat = reader.read_i32::<LittleEndian>().unwrap();
-        let id = reader.read_u64::<LittleEndian>().unwrap();
+        let id = reader.read_u64::<LittleEndian>().unwrap() as i64;
         let _ = reader.seek(SeekFrom::Current(8));
 
         Node {
             id: id,
-            lon: lon as f32 / 1e6,
-            lat: lat as f32 / 1e6
+            lon: lon as f64 / 1e6,
+            lat: lat as f64 / 1e6
         }
     }
 }
@@ -139,9 +139,9 @@ impl Graph {
             let lat_raw: f64 = row.get(2);
 
             let node = Node {
-                id: osm_id as u64,
-                lon: lon_raw as f32,
-                lat: lat_raw as f32
+                id: osm_id,
+                lon: lon_raw,
+                lat: lat_raw
             };
             nodes.push(node);
         }
@@ -184,24 +184,24 @@ impl Graph {
     }
 
     /// Gets the node IDs from a longitude and latitude.
-    pub fn get_id_from_lon_lat(&self, lon: f32, lat: f32) -> u64 {
+    pub fn get_id_from_lon_lat(&self, lon: f64, lat: f64) -> i64 {
         let nearest = self.rtree.nearest_neighbor(&Point2::new(lon, lat)).unwrap();
         nearest.id
     }
 
     /// Gets the internal ID from an OSM id.
-    fn get_id_from_osm(&self, osm_id: usize) -> usize {
-        self.nodes.iter().position(|r| r.id == osm_id as u64).unwrap()
+    fn get_id_from_osm(&self, osm_id: i64) -> usize {
+        self.nodes.iter().position(|r| r.id == osm_id).unwrap()
     }
 
     /// Gets the location from an internal id. Returns a vector containing
     /// longitude and latitude.
-    fn get_loc_from_id(&self, id: usize) -> Vec<f32> {
+    fn get_loc_from_id(&self, id: usize) -> Vec<f64> {
         vec![self.nodes[id].lon, self.nodes[id].lat]
     }
 
     /// Performs a routing request from source to target.
-    pub fn route(&self, source: usize, target: usize) -> (Vec<Vec<f32>>, f32) {
+    pub fn route(&self, source: i64, target: i64) -> (Vec<Vec<f64>>, f32) {
         let source_id = self.get_id_from_osm(source);
         let target_id = self.get_id_from_osm(target);
         let (pred, dist) = self.bellman(source_id);
@@ -230,7 +230,7 @@ impl Graph {
     /// Computes the reachability of all nodes in the graph, and returns those which
     /// are reachable. Returns a vector of vectors, where the coordinates are as follows:
     /// longitude, latitude, remaining_energy.
-    pub fn reachability(&self, source: usize, capacity: f32) -> Vec<Vec<f32>> {
+    pub fn reachability(&self, source: i64, capacity: f32) -> Vec<Vec<f64>> {
         let source_id = self.get_id_from_osm(source);
         let (pred, dist) = self.bellman(source_id);
         let max_length = self.nodes.len();
@@ -240,7 +240,7 @@ impl Graph {
         for (i, node) in dist.iter().enumerate() {
             if capacity - node >= 0.0 {
                 let mut loc = self.get_loc_from_id(i);
-                loc.push(capacity - node);
+                loc.push((capacity - node) as f64);
                 trace.push(loc);
             }
         }

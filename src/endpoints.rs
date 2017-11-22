@@ -12,15 +12,16 @@ use geojson::{Feature, FeatureCollection, GeoJson, Geometry};
 
 /// A pool that abstracts over the graph, and makes it available to all requests.
 pub struct GraphPool;
+
 impl Key for GraphPool { type Value = Graph; }
 
 /// Transforms the result of a route calculation into a GeoJSON, convenient for sending
 /// over the Internet.
-fn route_res_to_geojson(lat_lons: Vec<Vec<f32>>, cost: f32) -> String {
+fn route_res_to_geojson(lat_lons: Vec<Vec<f64>>, cost: f32) -> String {
     let geometry = Geometry::new(
         geojson::Value::LineString(lat_lons.iter().map(|x|
-            x.iter().map(|&y| y as f64).collect::<Vec<_>>()
-            ).collect::<Vec<_>>())
+            x.iter().map(|&y| y).collect::<Vec<_>>()
+        ).collect::<Vec<_>>())
     );
 
     let mut properties = BTreeMap::new();
@@ -42,7 +43,7 @@ fn route_res_to_geojson(lat_lons: Vec<Vec<f32>>, cost: f32) -> String {
 
 /// Transforms the result of a reachability calculation to a GeoJSON string, ready
 /// to be processed in the frontend.
-fn reachability_res_to_geojson(lat_lon_caps: Vec<Vec<f32>>) -> String {
+fn reachability_res_to_geojson(lat_lon_caps: Vec<Vec<f64>>) -> String {
     let mut features = Vec::new();
     for lat_lon in lat_lon_caps {
         let mut props = BTreeMap::new();
@@ -55,8 +56,8 @@ fn reachability_res_to_geojson(lat_lon_caps: Vec<Vec<f32>>) -> String {
             crs: None,
             bbox: None,
             geometry: Some(Geometry::new(
-                geojson::Value::Point(lat_lon[0..2].iter().map(|&y|
-                    y as f64).collect::<Vec<_>>())
+                geojson::Value::Point(lat_lon[0..2].iter()
+                    .map(|&y| y as f64).collect::<Vec<_>>())
             )),
             id: None,
             properties: Some(props)
@@ -81,19 +82,18 @@ pub fn route_lat_lon(req: &mut Request) -> IronResult<Response> {
     match (map.find(&["source-lon"]), map.find(&["source-lat"]),
            map.find(&["target-lon"]), map.find(&["target-lat"])) {
         (Some(&Value::String(ref source_lon)), Some(&Value::String(ref source_lat)),
-         Some(&Value::String(ref target_lon)), Some(&Value::String(ref target_lat))) => {
-
+            Some(&Value::String(ref target_lon)), Some(&Value::String(ref target_lat))) => {
             let bellman_start = time::now();
             println!("Starting Bellman-Ford ...");
-            let source_id = graph.get_id_from_lon_lat(source_lon.parse::<f32>().unwrap(),
-                                                      source_lat.parse::<f32>().unwrap());
-            let target_id = graph.get_id_from_lon_lat(target_lon.parse::<f32>().unwrap(),
-                                                      target_lat.parse::<f32>().unwrap());
-            let res = graph.route(source_id as usize, target_id as usize);
+            let source_id = graph.get_id_from_lon_lat(source_lon.parse::<f64>().unwrap(),
+                                                      source_lat.parse::<f64>().unwrap());
+            let target_id = graph.get_id_from_lon_lat(target_lon.parse::<f64>().unwrap(),
+                                                      target_lat.parse::<f64>().unwrap());
+            let res = graph.route(source_id, target_id);
             println!(" ˪— duration: {}s\n", (time::now() - bellman_start).num_seconds());
 
             Ok(Response::with((iron::status::Ok, route_res_to_geojson(res.0, res.1))))
-        },
+        }
         _ => Ok(Response::with(iron::status::NotFound))
     }
 }
@@ -106,15 +106,14 @@ pub fn route_ids(req: &mut Request) -> IronResult<Response> {
 
     match (map.find(&["source-id"]), map.find(&["target-id"])) {
         (Some(&Value::String(ref source_id)), Some(&Value::String(ref target_id))) => {
-
             let bellman_start = time::now();
             println!("Starting Bellman-Ford ...");
-            let res = graph.route(source_id.parse::<i32>().unwrap() as usize,
-                                  target_id.parse::<i32>().unwrap() as usize);
+            let res = graph.route(source_id.parse::<i64>().unwrap(),
+                                  target_id.parse::<i64>().unwrap());
             println!(" ˪— duration: {}s\n", (time::now() - bellman_start).num_seconds());
 
             Ok(Response::with((iron::status::Ok, route_res_to_geojson(res.0, res.1))))
-        },
+        }
         _ => Ok(Response::with(iron::status::NotFound))
     }
 }
@@ -127,17 +126,16 @@ pub fn reachability(req: &mut Request) -> IronResult<Response> {
 
     match (map.find(&["source-lon"]), map.find(&["source-lat"]), map.find(&["capacity"])) {
         (Some(&Value::String(ref source_lon)), Some(&Value::String(ref source_lat)),
-         Some(&Value::String(ref capacity))) => {
-
+            Some(&Value::String(ref capacity))) => {
             let bellman_start = time::now();
             println!("Starting Reachability Bellman-Ford ...");
-            let source_id = graph.get_id_from_lon_lat(source_lon.parse::<f32>().unwrap(),
-                                                      source_lat.parse::<f32>().unwrap());
-            let res = graph.reachability(source_id as usize, capacity.parse::<f32>().unwrap());
+            let source_id = graph.get_id_from_lon_lat(source_lon.parse::<f64>().unwrap(),
+                                                      source_lat.parse::<f64>().unwrap());
+            let res = graph.reachability(source_id, capacity.parse::<f32>().unwrap());
             println!(" ˪— duration: {}s\n", (time::now() - bellman_start).num_seconds());
 
             Ok(Response::with((iron::status::Ok, reachability_res_to_geojson(res))))
-        },
+        }
         _ => Ok(Response::with(iron::status::NotFound))
     }
 }

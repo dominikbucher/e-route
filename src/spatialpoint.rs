@@ -7,14 +7,14 @@ use spade::BoundingRect;
 #[derive(Debug)]
 pub struct SpatialPoint {
     /// The point's coordinates.
-    pub center: Point2<f32>,
+    pub center: Point2<f64>,
     /// The associated OSM id.
-    pub id: u64,
+    pub id: i64,
 }
 
 impl SpatialPoint {
     /// Create a new point.
-    pub fn new(center: Point2<f32>, id: u64) -> SpatialPoint {
+    pub fn new(center: Point2<f64>, id: i64) -> SpatialPoint {
         SpatialPoint {
             center: center,
             id: id,
@@ -23,13 +23,13 @@ impl SpatialPoint {
 }
 
 impl SpatialObject for SpatialPoint {
-    type Point = Point2<f32>;
+    type Point = Point2<f64>;
 
-    fn mbr(&self) -> BoundingRect<Point2<f32>> {
+    fn mbr(&self) -> BoundingRect<Point2<f64>> {
         BoundingRect::from_corners(&(self.center.clone()), &(self.center.clone()))
     }
 
-    fn distance2(&self, point: &Point2<f32>) -> f32 {
+    fn distance2(&self, point: &Point2<f64>) -> f64 {
         let dx = self.center[0] - point[0];
         let dy = self.center[1] - point[1];
         let dist = (dx * dx + dy * dy).sqrt().max(zero());
@@ -37,7 +37,7 @@ impl SpatialObject for SpatialPoint {
     }
 
     // Nothing is contained within a point.
-    fn contains(&self, point: &Point2<f32>) -> bool {
+    fn contains(&self, point: &Point2<f64>) -> bool {
         false
     }
 }
