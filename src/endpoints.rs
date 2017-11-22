@@ -5,7 +5,7 @@ extern crate geojson;
 use iron::prelude::*;
 use iron::typemap::Key;
 use persistent::Read;
-use graph::Graph;
+use graph::core::Graph;
 use std::collections::BTreeMap;
 use rustc_serialize::json::ToJson;
 use geojson::{Feature, FeatureCollection, GeoJson, Geometry};

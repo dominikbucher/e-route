@@ -15,9 +15,14 @@ extern crate geojson;
 extern crate rustc_serialize;
 extern crate osmpbfreader;
 extern crate rust_geotiff;
+extern crate clap;
+extern crate config;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+extern crate bincode;
+extern crate flate2;
 
-
-use std::env;
 use iron::prelude::*;
 use router::Router;
 use mount::Mount;
@@ -26,38 +31,54 @@ use staticfile::Static;
 use std::path::Path;
 use pbr::ProgressBar;
 use rust_geotiff::TIFFReader;
+use clap::{Arg, App};
+use std::collections::HashMap;
+use config::*;
 
 mod graph;
 mod spatialpoint;
 mod endpoints;
 
-use graph::Graph;
+use graph::builder::GraphBuilder;
+use graph::core::Graph;
 use endpoints::GraphPool;
-
-fn wanted(obj: &osmpbfreader::OsmObj) -> bool {
-    obj.is_way()
-}
 
 /// Main function and entry point to the program.
 fn main() {
-    // Startup.
-    println!("\n<== Welcome to e-route ==>");
-    let args: Vec<_> = env::args().collect();
-    let start = time::now();
+    let route_app = App::new("e-Router").version("0.1")
+        .author("Dominik Bucher <dominik.bucher@gmail.com>")
+        .about("A route calculation package, that focuses on electric mobility.")
+        .arg(Arg::with_name("mode").required(true).index(1))
+        .arg(Arg::with_name("config").value_name("FILE").takes_value(true))
+        .get_matches();
 
+    let filename = route_app.value_of("config").unwrap_or("default-conf.json");
+    let mut settings = Config::default();
+    settings.merge(File::from(Path::new(&filename))).unwrap();
+    let settings_map = settings
+        .try_into::<HashMap<String, String>>().unwrap();
+
+    match route_app.value_of("mode") {
+        Some("build-graph") => build_graph(settings_map),
+        Some("run-server") => run_server(settings_map),
+        _ => panic!("Unknown mode! Use one of 'build-graph', 'run-server'.")
+    }
+}
+
+/// Graph building facility.
+fn build_graph(settings_map: HashMap<String, String>) -> () {
     // Loading the DEM data.
-    println!("Reading DEM file from '{}'.", args[2]);
-    let dem_path = std::path::Path::new(&args[2]);
-    let img = TIFFReader.load(&args[2]).unwrap();
+    let dem_file = settings_map.get("dem_file").unwrap();
+    println!("Reading DEM file from '{}'.", dem_file);
+    //let img = TIFFReader.load(dem_file).unwrap();
     println!("Finished reading DEM file.");
 
     // Loading the OSM pbf data.
-    println!("Reading pbf file from '{}'.", args[1]);
-    let pbf_path = std::path::Path::new(&args[1]);
+    let pbf_file = settings_map.get("osm_pbf_file").unwrap();
+    println!("Reading pbf file from '{}'.", pbf_file);
+    let pbf_path = std::path::Path::new(pbf_file);
     let pbf_file = std::fs::File::open(&pbf_path).unwrap();
     let mut pbf = osmpbfreader::OsmPbfReader::new(pbf_file);
-    let pbf_data = pbf.get_objs_and_deps(wanted).unwrap();
-    println!("Found {:?} ways in dataset.", pbf_data.len());
 
     // Processing data.
     println!("Starting graph construction.");
@@ -66,10 +87,20 @@ fn main() {
     pb.format("╢▌▌░╟");
     pb.inc();
 
+    let graph = GraphBuilder::build_from_pbf(&mut pbf);
+    println!("Finished building graph.");
+}
+
+/// Exposes a graph to a public HTTP endpoint.
+fn run_server(settings_map: HashMap<String, String>) -> () {
     // let graph = Graph::new(&args[1]);
-    let graph = Graph::new_from_db(&args[2], &args[3], &args[4], &args[5], &args[6],
-                                   &args[7], &args[8]);
-    println!("   duration: {}s\n", (time::now() - start).num_seconds());
+    let graph = Graph::load_from_db(settings_map.get("db_user").unwrap(),
+                                   settings_map.get("db_password").unwrap(),
+                                   settings_map.get("db_database").unwrap(),
+                                   settings_map.get("db_database").unwrap(),
+                                   settings_map.get("db_database").unwrap(),
+                                   settings_map.get("db_database").unwrap(),
+                                   settings_map.get("db_database").unwrap());
 
     // Setting up the router for the web server.
     let mut router = Router::new();
@@ -84,6 +115,7 @@ fn main() {
     let mut chain = Chain::new(mount);
     chain.link_before(Read::<GraphPool>::one(graph));
 
-    let address = ["127.0.0.1", &args[1]].join(":");
+    let address = [settings_map.get("server_host").unwrap().as_str(),
+        settings_map.get("server_port").unwrap()].join(":");
     Iron::new(chain).http(&*address).unwrap();
 }

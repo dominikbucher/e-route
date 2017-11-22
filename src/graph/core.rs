@@ -12,8 +12,8 @@ use spatialpoint::SpatialPoint;
 // Inspired by http://codegists.com/snippet/rust/bellmanrs_tristramg_rust.
 
 /// Holds a single node, containing the OSM id, longitude, and latitude.
-#[derive(Debug)]
-struct Node {
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Node {
     /// The OSM id associated with this node.
     id: u64,
     /// The longitude of this node.
@@ -24,8 +24,8 @@ struct Node {
 
 /// Holds a single edge, containing the source node, the target node,
 /// and the edge weight.
-#[derive(Debug)]
-struct Edge {
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Edge {
     /// Where this edge starts.
     source: usize,
     /// Where this edge ends.
@@ -37,11 +37,11 @@ struct Edge {
 /// Contains a whole graph.
 pub struct Graph {
     /// All the edges contained in the graph.
-    edges: Vec<Edge>,
+    pub edges: Vec<Edge>,
     /// All the nodes contained in this graph.
-    nodes: Vec<Node>,
+    pub nodes: Vec<Node>,
     /// An R tree for quick access to the nodes, given a longitude and latitude.
-    rtree: RTree<SpatialPoint>
+    pub rtree: RTree<SpatialPoint>
 }
 
 /// Implementation of node.
@@ -83,7 +83,7 @@ impl Edge {
 impl Graph {
     /// Creates a new graph, by reading an OSRM file. This also adds and returns an OSM id
     /// as the starting point for a later bellman-ford query.
-    pub fn new(file: &String) -> Graph {
+    pub fn load_from_osrm(file: &String) -> Graph {
         let file = File::open(file).unwrap();
 
         let mut reader = BufReader::new(&file);
@@ -125,7 +125,7 @@ impl Graph {
     }
 
     /// Loads a graph from a Postgres database.
-    pub fn new_from_db(uname: &String, pw: &String, db: &String,
+    pub fn load_from_db(uname: &String, pw: &String, db: &String,
                        ways_vert_table: &String, ways_table: &String,
                        weight: &String, weight_rev: &String) -> Graph {
         let conn_str = format!("postgres://{}:{}@localhost/{}", uname, pw, db);
