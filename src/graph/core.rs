@@ -1,6 +1,8 @@
 use std;
 use std::fs::File;
 use std::io::{BufReader, Seek, SeekFrom};
+use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashMap};
 use byteorder::{LittleEndian, ReadBytesExt};
 use pbr::ProgressBar;
 use spade::rtree::RTree;
@@ -290,5 +292,63 @@ impl Graph {
         println!(" ˪— Bellman iterations: {}", count);
 
         (pred, dist)
+    }
+
+    /// Runs the Djikstra algorithm on the graph. Returns a tuple, containing a vector of
+    /// predecessors and a vector of distances to the source node.
+    fn djikstra(&self, source: usize, target: usize) -> Option<f32> {
+        let mut dists: HashMap<usize, f32> = HashMap::new();
+        let mut heap = BinaryHeap::new();
+
+        dists.insert(source, 0.0);
+        heap.push(State { cost: 0.0, position: source });
+
+        while let Some(State { cost, position }) = heap.pop() {
+            if position == target { return Some(cost); }
+            if cost > dists[&position] { continue; }
+
+            for edge in &self.edges {
+                if (edge.source == position) {
+                    let next = State { cost: cost + edge.weight, position: edge.target };
+                    if !dists.contains_key(&next.position) {
+                        dists.insert(next.position, next.cost);
+                        heap.push(next);
+                    } else if next.cost < dists[&next.position] {
+                        dists.insert(next.position, next.cost);
+                        heap.push(next);
+                    }
+                }
+            }
+        }
+
+        None
+    }
+}
+
+#[derive(Copy, Clone, PartialEq)]
+struct State {
+    cost: f32,
+    position: usize,
+}
+
+impl Eq for State {}
+
+// The priority queue depends on `Ord`.
+// Explicitly implement the trait so the queue becomes a min-heap
+// instead of a max-heap.
+impl Ord for State {
+    fn cmp(&self, other: &State) -> Ordering {
+        // Notice that the we flip the ordering on costs.
+        // In case of a tie we compare positions - this step is necessary
+        // to make implementations of `PartialEq` and `Ord` consistent.
+        other.cost.partial_cmp(&self.cost).unwrap_or(Ordering::Less)
+            .then_with(|| self.position.cmp(&other.position))
+    }
+}
+
+// `PartialOrd` needs to be implemented as well.
+impl PartialOrd for State {
+    fn partial_cmp(&self, other: &State) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
