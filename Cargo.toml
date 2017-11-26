@@ -31,4 +31,4 @@ gluon = "0.6.2"
 
 [lib]
 name = "rust_geotiff"
-path = "../rust-geotiff-old/src/lib.rs"
+path = "../rust-geotiff/src/lib.rs"

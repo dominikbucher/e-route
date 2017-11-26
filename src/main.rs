@@ -30,7 +30,7 @@ use persistent::Read;
 use staticfile::Static;
 use std::path::Path;
 use pbr::ProgressBar;
-use rust_geotiff::TIFFReader;
+use rust_geotiff::tiff::TIFF;
 use clap::{Arg, App};
 use std::collections::HashMap;
 use config::*;
