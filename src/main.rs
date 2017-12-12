@@ -22,6 +22,7 @@ extern crate serde;
 extern crate serde_derive;
 extern crate bincode;
 extern crate flate2;
+extern crate gluon;
 
 use iron::prelude::*;
 use router::Router;
@@ -88,7 +89,10 @@ fn build_graph(settings_map: HashMap<String, String>) -> () {
     pb.format("╢▌▌░╟");
     pb.inc();
 
-    let graph = GraphBuilder::build_from_pbf(&mut pbf);
+    let script_file = std::fs::File::open(
+        &std::path::Path::new(settings_map.get("transport_mode").unwrap()));
+
+    let graph = GraphBuilder::build_from_pbf(&mut pbf, &mut script_file.unwrap());
     let graph_file = settings_map.get("graph_file").unwrap();
     graph.write_to_file(graph_file);
     println!("Finished building graph.");

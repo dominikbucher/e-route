@@ -27,11 +27,13 @@ pub struct Node {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Edge {
     /// Where this edge starts.
-    pub source: usize,
+    pub source: i64,
     /// Where this edge ends.
-    pub target: usize,
+    pub target: i64,
     /// The weight of this edge.
     pub weight: f32,
+    /// The tag of this edge.
+    pub highway_tag: String
 }
 
 /// Contains a whole graph.
@@ -65,8 +67,8 @@ impl Node {
 impl Edge {
     /// Reads an edge from an OSRM file.
     fn from_osrm(reader: &mut BufReader<&File>) -> Edge {
-        let source = reader.read_u32::<LittleEndian>().unwrap() as usize;
-        let target = reader.read_u32::<LittleEndian>().unwrap() as usize;
+        let source = reader.read_u32::<LittleEndian>().unwrap() as i64;
+        let target = reader.read_u32::<LittleEndian>().unwrap() as i64;
         let _ = reader.seek(SeekFrom::Current(4));
         let weight = reader.read_u32::<LittleEndian>().unwrap();
         let _ = reader.seek(SeekFrom::Current(8));
@@ -75,6 +77,7 @@ impl Edge {
             source: source,
             target: target,
             weight: weight as f32,
+            highway_tag: "".to_string()
         }
     }
 }
@@ -158,17 +161,19 @@ impl Graph {
             // This comes from the fact that the Rust vector is 0-indexed, but in Postgres,
             // the IDs start with 1.
             let edge = Edge {
-                source: source_id as usize - 1,
-                target: target_id as usize - 1,
-                weight: weight_raw as f32
+                source: source_id - 1,
+                target: target_id - 1,
+                weight: weight_raw as f32,
+                highway_tag: "".to_string()
             };
             edges.push(edge);
 
             // We also insert edges for every backward edge.
             let edge = Edge {
-                source: target_id as usize - 1,
-                target: source_id as usize - 1,
-                weight: weight_raw_rev as f32
+                source: target_id - 1,
+                target: source_id - 1,
+                weight: weight_raw_rev as f32,
+                highway_tag: "".to_string()
             };
             edges.push(edge);
         }
@@ -263,12 +268,12 @@ impl Graph {
         while improvement {
             improvement = false;
             for edge in &self.edges {
-                let source_dist = dist[edge.source];
-                let target_dist = dist[edge.target];
+                let source_dist = dist[edge.source as usize];
+                let target_dist = dist[edge.target as usize];
 
                 if source_dist != std::f32::MAX && source_dist + edge.weight < target_dist {
-                    dist[edge.target] = source_dist + edge.weight;
-                    pred[edge.target] = edge.source;
+                    dist[edge.target as usize] = source_dist + edge.weight;
+                    pred[edge.target as usize] = edge.source as usize;
                     improvement = true;
                 }
 
