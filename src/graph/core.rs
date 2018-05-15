@@ -313,8 +313,8 @@ impl Graph {
             if cost > dists[&position] { continue; }
 
             for edge in &self.edges {
-                if (edge.source == position) {
-                    let next = State { cost: cost + edge.weight, position: edge.target };
+                if (edge.source == position as i64) {
+                    let next = State { cost: cost + edge.weight, position: edge.target as usize };
                     if !dists.contains_key(&next.position) {
                         dists.insert(next.position, next.cost);
                         heap.push(next);

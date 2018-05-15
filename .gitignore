@@ -10,3 +10,5 @@
 data/*
 npm-debug.log
 /.idea/*
+/rls/debug/
+/rls/.rustc_info.json

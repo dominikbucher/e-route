@@ -93,9 +93,10 @@ fn build_graph(settings_map: HashMap<String, String>) -> () {
         &std::path::Path::new(settings_map.get("transport_mode").unwrap()));
 
     let graph = GraphBuilder::build_from_pbf(&mut pbf, &mut script_file.unwrap());
+    println!("Finished building graph, starting to write to file.");    
     let graph_file = settings_map.get("graph_file").unwrap();
     graph.write_to_file(graph_file);
-    println!("Finished building graph.");
+    println!("Finished graph construction.");
 }
 
 /// Exposes a graph to a public HTTP endpoint.
