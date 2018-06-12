@@ -1,23 +1,23 @@
 let edge_valid highway_tag =
     if "motorway" == highway_tag ||
        "trunk" == highway_tag ||
-       /*"primary" == highway_tag ||
+       "primary" == highway_tag ||
        "secondary" == highway_tag ||
        "tertiary" == highway_tag ||
        "unclassified" == highway_tag ||
        "residential" == highway_tag ||
-       "service" == highway_tag ||*/
+       "service" == highway_tag ||
        "motorway_link" == highway_tag ||
        "trunk_link" == highway_tag ||
-       /*"primary_link" == highway_tag ||
-       "secondary_link" == highway_tag ||*/
+       "primary_link" == highway_tag ||
+       "secondary_link" == highway_tag ||
        "tertiary_link" == highway_tag then
         True
     else
         False
 
-let edge_weight way start end =
+let edge_weight way length start end =
     // way._1 corresponds to the length of the way.
-    way._1
+    length
 
 { edge_valid, edge_weight }

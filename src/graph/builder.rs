@@ -5,11 +5,13 @@ use spade::rtree::RTree;
 use osmpbfreader::{OsmPbfReader, OsmObj};
 use std::collections::{HashMap, HashSet};
 use gluon;
-use gluon::vm::api::{OpaqueValue, Hole, FunctionRef};
+use gluon::vm::api::{OpaqueValue, Hole, FunctionRef, IO};
 use gluon::vm::thread::Thread;
 
 use graph::core::{Graph, Node, Edge};
 use graph::serializer::SerializableGraph;
+
+use rust_geotiff::TIFF;
 
 const MODULE_NAME: &'static &str = &"transport";
 const FN_EDGE_VALID: &'static &str = &"transport.edge_valid";
@@ -18,7 +20,7 @@ const FN_EDGE_WEIGHT: &'static &str = &"transport.edge_weight";
 pub struct GraphBuilder {}
 
 impl GraphBuilder {
-    pub fn build_from_pbf(pbf: &mut OsmPbfReader<File>, gluon_trans_scr: &mut File) -> SerializableGraph {
+    pub fn build_from_pbf(pbf: &mut OsmPbfReader<File>, gluon_trans_scr: &mut File, dem: &TIFF) -> SerializableGraph {
         // Set up everything that is required for Gluon. The Gluon scripts are used
         // to specify which transport modes are extracted from the OSM file.
         type GluonEdge = (String);
@@ -36,7 +38,7 @@ impl GraphBuilder {
         let mut edge_valid: FunctionRef<fn (GluonEdge) -> bool> = gluon_vm
             .get_global(FN_EDGE_VALID)
             .unwrap();
-        let mut edge_weight: FunctionRef<fn (GluonEdge, GluonNode, GluonNode) -> f64> = gluon_vm
+        let mut edge_weight: FunctionRef<fn (GluonEdge, f64, GluonNode, GluonNode) -> f64> = gluon_vm
             .get_global(FN_EDGE_WEIGHT)
             .unwrap();
 
@@ -92,7 +94,7 @@ impl GraphBuilder {
             let source_node = &nodes[edge.source as usize];
             let target_node = &nodes[edge.target as usize];
             edge.weight = edge_weight
-                .call((&edge.highway_tag).to_string(),
+                .call((&edge.highway_tag).to_string(), source_node.dist_to(target_node),
                       (source_node.lon, source_node.lat),
                       (target_node.lon, target_node.lat))
                 .unwrap() as f32;

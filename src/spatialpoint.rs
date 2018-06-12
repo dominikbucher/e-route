@@ -1,7 +1,7 @@
-use cgmath::Point2;
 use num::zero;
 use spade::SpatialObject;
 use spade::BoundingRect;
+use cgmath::Point2;
 
 /// A spatial point, to be stored in an R tree from the spade crate.
 #[derive(Debug)]

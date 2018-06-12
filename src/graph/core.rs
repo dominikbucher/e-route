@@ -35,7 +35,7 @@ pub struct Edge {
     /// The weight of this edge.
     pub weight: f32,
     /// The tag of this edge.
-    pub highway_tag: String
+    pub highway_tag: String,
 }
 
 /// Contains a whole graph.
@@ -45,7 +45,7 @@ pub struct Graph {
     /// All the nodes contained in this graph.
     pub nodes: Vec<Node>,
     /// An R tree for quick access to the nodes, given a longitude and latitude.
-    pub rtree: RTree<SpatialPoint>
+    pub rtree: RTree<SpatialPoint>,
 }
 
 /// Implementation of node.
@@ -60,8 +60,22 @@ impl Node {
         Node {
             id: id,
             lon: lon as f64 / 1e6,
-            lat: lat as f64 / 1e6
+            lat: lat as f64 / 1e6,
         }
+    }
+
+    /// Computes the Haversine distance to another node.
+    pub fn dist_to(&self, other: &Node) -> f64 {
+        let earth_radius = 6371.0;
+        let lat1_rad = self.lat.to_radians();
+        let lon1_rad = self.lon.to_radians();
+        let lat2_rad = other.lat.to_radians();
+        let lon2_rad = other.lon.to_radians();
+
+        let tmp = ((lat2_rad - lat1_rad) / 2.00).sin().powf(2.0) +
+            lat1_rad.cos() * lat2_rad.cos() * ((lon2_rad - lon1_rad) / 2.0).sin().powf(2.0);
+        let tmp = 2.0 * ((tmp).sqrt().atan2((1.0 - tmp).sqrt()));
+        earth_radius * tmp
     }
 }
 
@@ -79,7 +93,7 @@ impl Edge {
             source: source,
             target: target,
             weight: weight as f32,
-            highway_tag: "".to_string()
+            highway_tag: "".to_string(),
         }
     }
 }
@@ -131,8 +145,8 @@ impl Graph {
 
     /// Loads a graph from a Postgres database.
     pub fn load_from_db(uname: &String, pw: &String, db: &String,
-                       ways_vert_table: &String, ways_table: &String,
-                       weight: &String, weight_rev: &String) -> Graph {
+                        ways_vert_table: &String, ways_table: &String,
+                        weight: &String, weight_rev: &String) -> Graph {
         let conn_str = format!("postgres://{}:{}@localhost/{}", uname, pw, db);
         let conn = Connection::connect(conn_str, TlsMode::None).unwrap();
 
@@ -146,7 +160,7 @@ impl Graph {
             let node = Node {
                 id: osm_id,
                 lon: lon_raw,
-                lat: lat_raw
+                lat: lat_raw,
             };
             nodes.push(node);
         }
@@ -166,7 +180,7 @@ impl Graph {
                 source: source_id - 1,
                 target: target_id - 1,
                 weight: weight_raw as f32,
-                highway_tag: "".to_string()
+                highway_tag: "".to_string(),
             };
             edges.push(edge);
 
@@ -175,7 +189,7 @@ impl Graph {
                 source: target_id - 1,
                 target: source_id - 1,
                 weight: weight_raw_rev as f32,
-                highway_tag: "".to_string()
+                highway_tag: "".to_string(),
             };
             edges.push(edge);
         }
@@ -215,7 +229,7 @@ impl Graph {
         let max_length = self.edges.len();
 
         println!(" ˪— Backtracking from {}, having {} edges. Total cost: {}.",
-            target_id, max_length, dist[target_id]);
+                 target_id, max_length, dist[target_id]);
         let mut trace = Vec::new();
         let mut current_node = target_id;
         trace.push(self.get_loc_from_id(current_node));

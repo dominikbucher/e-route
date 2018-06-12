@@ -1,9 +1,10 @@
 [package]
-name = "bellman_osm"
+name = "e_route"
 version = "0.1.1"
 authors = ["Dominik Bucher <dominik.bucher@gmail.com>"]
 
 [dependencies]
+rand = "0.4"
 byteorder = "0.5.3"
 postgres = "0.13.3"
 time = "0.1"
@@ -11,7 +12,7 @@ pbr = "1.0.0"
 iron = "*"
 params = "*"
 router = "*"
-spade = "1.2.*"
+spade = "1.5.*"
 cgmath = ">=0.11.0"
 num = "0.1.*"
 persistent = "*"

@@ -31,7 +31,6 @@ use persistent::Read;
 use staticfile::Static;
 use std::path::Path;
 use pbr::ProgressBar;
-use rust_geotiff::tiff::TIFF;
 use clap::{Arg, App};
 use std::collections::HashMap;
 use config::*;
@@ -44,6 +43,7 @@ use graph::builder::GraphBuilder;
 use graph::serializer::SerializableGraph;
 use graph::core::Graph;
 use endpoints::GraphPool;
+use rust_geotiff::TIFF;
 
 /// Main function and entry point to the program.
 fn main() {
@@ -72,7 +72,7 @@ fn build_graph(settings_map: HashMap<String, String>) -> () {
     // Loading the DEM data.
     let dem_file = settings_map.get("dem_file").unwrap();
     println!("Reading DEM file from '{}'.", dem_file);
-    //let img = TIFFReader.load(dem_file).unwrap();
+    let img = TIFF::open(dem_file).unwrap();
     println!("Finished reading DEM file.");
 
     // Loading the OSM pbf data.
@@ -92,7 +92,7 @@ fn build_graph(settings_map: HashMap<String, String>) -> () {
     let script_file = std::fs::File::open(
         &std::path::Path::new(settings_map.get("transport_mode").unwrap()));
 
-    let graph = GraphBuilder::build_from_pbf(&mut pbf, &mut script_file.unwrap());
+    let graph = GraphBuilder::build_from_pbf(&mut pbf, &mut script_file.unwrap(), &img);
     println!("Finished building graph, starting to write to file.");    
     let graph_file = settings_map.get("graph_file").unwrap();
     graph.write_to_file(graph_file);
