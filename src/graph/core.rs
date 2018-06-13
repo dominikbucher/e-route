@@ -296,8 +296,8 @@ impl Graph {
                 // This would be needed for undirected edges, as we'd have to follow every
                 // edge both ways in that case.
                 // if target_dist != std::f32::MAX && target_dist + edge.weight < source_dist {
-                //     dist[edge.source] = target_dist + edge.weight;
-                //     pred[edge.source] = edge.target;
+                //     dist[edge.source as usize] = target_dist + edge.weight;
+                //     pred[edge.source as usize] = edge.target as usize;
                 //     improvement = true;
                 // }
             }

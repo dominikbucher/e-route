@@ -64,6 +64,14 @@ impl GraphBuilder {
                             weight: 1.0,
                             highway_tag: highway_tag.to_string()
                         });
+                        // TODO For now, we simply flip the edge so we can still keep directed edges.
+                        // Actually, this doesn't work with Bellman-Ford.
+                        edges.push(Edge {
+                            source: node[1].0,
+                            target: node[0].0,
+                            weight: 1.0,
+                            highway_tag: highway_tag.to_string()
+                        });
                         important_nodes.insert(node[0].0);
                         important_nodes.insert(node[1].0);
                     }
