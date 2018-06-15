@@ -225,27 +225,31 @@ impl Graph {
     pub fn route(&self, source: i64, target: i64) -> (Vec<Vec<f64>>, f32) {
         let source_id = self.get_id_from_osm(source);
         let target_id = self.get_id_from_osm(target);
-        let (pred, dist) = self.bellman(source_id);
-        let max_length = self.edges.len();
+        match self.djikstra(source_id, target_id) {
+            Some((pred, dist)) => {
+                let max_length = self.edges.len();
 
-        println!(" ˪— Backtracking from {}, having {} edges. Total cost: {}.",
-                 target_id, max_length, dist[target_id]);
-        let mut trace = Vec::new();
-        let mut current_node = target_id;
-        trace.push(self.get_loc_from_id(current_node));
-        let mut count = 0;
-        while current_node != source_id {
-            current_node = pred[current_node];
-            trace.push(self.get_loc_from_id(current_node));
+                println!(" ˪— Backtracking from {}, having {} edges. Total cost: {}.",
+                         target_id, max_length, dist[target_id]);
+                let mut trace = Vec::new();
+                let mut current_node = target_id;
+                trace.push(self.get_loc_from_id(current_node));
+                let mut count = 0;
+                while current_node != source_id {
+                    current_node = pred[current_node];
+                    trace.push(self.get_loc_from_id(current_node));
 
-            count = count + 1;
-            // Make sure this doesn't run forever.
-            if count > max_length {
-                current_node = source_id;
-            }
+                    count = count + 1;
+                    // Make sure this doesn't run forever.
+                    if count > max_length {
+                        current_node = source_id;
+                    }
+                }
+
+                (trace, dist[target_id])
+            },
+            None => (Vec::new(), 0 as f32)
         }
-
-        (trace, dist[target_id])
     }
 
     /// Computes the reachability of all nodes in the graph, and returns those which
@@ -253,25 +257,29 @@ impl Graph {
     /// longitude, latitude, remaining_energy.
     pub fn reachability(&self, source: i64, capacity: f32) -> Vec<Vec<f64>> {
         let source_id = self.get_id_from_osm(source);
-        let (pred, dist) = self.bellman(source_id);
-        let max_length = self.nodes.len();
+        match self.bellman(source_id) {
+            Some((pred, dist)) => {
+                let max_length = self.nodes.len();
 
-        println!(" ˪— Assessing all {} nodes to select feasible ones.", max_length);
-        let mut trace = Vec::new();
-        for (i, node) in dist.iter().enumerate() {
-            if capacity - node >= 0.0 {
-                let mut loc = self.get_loc_from_id(i);
-                loc.push((capacity - node) as f64);
-                trace.push(loc);
-            }
+                println!(" ˪— Assessing all {} nodes to select feasible ones.", max_length);
+                let mut trace = Vec::new();
+                for (i, node) in dist.iter().enumerate() {
+                    if capacity - node >= 0.0 {
+                        let mut loc = self.get_loc_from_id(i);
+                        loc.push((capacity - node) as f64);
+                        trace.push(loc);
+                    }
+                }
+
+                trace
+            },
+            None => Vec::new()
         }
-
-        trace
     }
 
     /// Runs the Bellman Ford algorithm on the graph. Returns a tuple, containing a vector of
     /// predecessors and a vector of distances to the source node.
-    fn bellman(&self, source: usize) -> (Vec<usize>, Vec<f32>) {
+    fn bellman(&self, source: usize) -> Option<(Vec<usize>, Vec<f32>)> {
         let nodes_count = self.nodes.len();
         let max_length = self.edges.len();
         println!(" ˪— Starting from {}, having {} nodes.", source, nodes_count);
@@ -310,12 +318,12 @@ impl Graph {
         }
         println!(" ˪— Bellman iterations: {}", count);
 
-        (pred, dist)
+        Some((pred, dist))
     }
 
     /// Runs the Djikstra algorithm on the graph. Returns a tuple, containing a vector of
     /// predecessors and a vector of distances to the source node.
-    fn djikstra(&self, source: usize, target: usize) -> Option<f32> {
+    fn djikstra(&self, source: usize, target: usize) -> Option<(Vec<usize>, Vec<f32>)> {
         let mut dists: HashMap<usize, f32> = HashMap::new();
         let mut heap = BinaryHeap::new();
 
@@ -323,11 +331,19 @@ impl Graph {
         heap.push(State { cost: 0.0, position: source });
 
         while let Some(State { cost, position }) = heap.pop() {
-            if position == target { return Some(cost); }
+            if position == target {
+                let mut predecessors = Vec::new();
+                let mut distances = Vec::new();
+                for (key, val) in dists.iter_mut() {
+                    predecessors.push(*key);
+                    distances.push(*val);
+                }
+                return Some((predecessors, distances));
+            }
             if cost > dists[&position] { continue; }
 
             for edge in &self.edges {
-                if (edge.source == position as i64) {
+                if edge.source == position as i64 {
                     let next = State { cost: cost + edge.weight, position: edge.target as usize };
                     if !dists.contains_key(&next.position) {
                         dists.insert(next.position, next.cost);
@@ -340,6 +356,17 @@ impl Graph {
             }
         }
 
+        None
+    }
+
+    /// Runs Djikstra from both sides, resulting in half as many computations (as they "meet"
+    /// in the middle).
+    fn djikstra_double(&self, source: usize, target: usize) -> Option<(Vec<usize>, Vec<f32>)> {
+        None
+    }
+
+    /// Runs the A* algorithm on the graph. This is faster than Djikstra in many cases.
+    fn a_star(&self, source: usize, target: usize) -> Option<(Vec<usize>, Vec<f32>)> {
         None
     }
 }
