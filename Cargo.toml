@@ -1,13 +1,13 @@
 [package]
 name = "e_route"
-version = "0.1.1"
+version = "0.0.1"
 authors = ["Dominik Bucher <dominik.bucher@gmail.com>"]
 
 [dependencies]
-rand = "0.4"
-byteorder = "0.5.3"
+rand = "*"
+byteorder = "*"
 postgres = "0.13.3"
-time = "0.1"
+time = "*"
 pbr = "1.0.0"
 iron = "*"
 params = "*"
@@ -28,7 +28,7 @@ serde = "1.0.21"
 serde_derive = "1.0"
 bincode = "0.9.2"
 flate2 = "0.2"
-gluon = "0.7.1"
+gluon = "0.10.1"
 
 [lib]
 name = "rust_geotiff"
