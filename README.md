@@ -8,21 +8,20 @@ The Bellman-Ford algorithm was thus originally used for route computation within
 
 # Installation and Usage
 
-You can run the application directly using `cargo`. Run with using the following syntax:
+You can run the application directly using `cargo`. Run using one of the following two commands:
 
 ```
-cargo run port database_user database_password database_name ways_vert_table_name ways_table_name forward_cost_column backward_cost_column
+cargo run build-graph config-file.json
+cargo run run-server config-file.json
 ```
 
-```
-cargo run 9000 dominik 123456 ebikes ways_vertices_pgr ways v25_rec_wh v25_rec_r_wh
-```
+The first will take an OpenStreetMap file and build a graph from it. The second uses this graph to host a web server that can be used for routing. The specification of the OSM file and server configuration can be supplied with the optional `config-file.json` file; otherwise the default file `default-conf.json` will be used. You can look at this default file to see what can be specified how.
 
 To have a faster-running executable, use the following code to build, and then execute the application (the example is on Windows):
 
 ```
 cargo build --release
-target\release\bellman_osm.exe 9000 dominik 123456 ebikes ways_vertices_pgr ways v25_rec_wh v25_rec_r_wh
+target\release\bellman_osm.exe build-graph config-file.json
 ```
 
 Attention: Make sure to be in the right directory, as the implementation uses the current directory to look for `index.html`, i.e., under `src/static`.
@@ -56,3 +55,7 @@ Running one of the above commands (either `cargo run` or `cargo build` plus runn
 Clone the repository and run `cargo test` to get started! Pull requests are welcome, don't forget to add yourself to the `AUTHORS.md` file.
 
 This application uses transport mode specifications written in [Gluon](https://github.com/gluon-lang/gluon). As for now, there is only a single transport mode supported: `car.glu`. Feel free to create new ones!
+
+## Pitfalls and Danger Zones
+
+The use of the `spade` crate is a bit involved. Basically, whenever spade upgrades (as for now, it's fixed in `Cargo.toml`), you have to take the version of `cgmath` from the `spade` repository, and enter it in `Cargo.toml`. Otherwise `cargo` will complain that `Point2` does not implement `PointN` (from `spade`). 
