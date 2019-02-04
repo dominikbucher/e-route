@@ -2,11 +2,11 @@
 
 ![Version](https://img.shields.io/badge/version-v0.0.1-red.svg)
 
-A fast routing system (using algorithms such as Djikstra, A*, Bellman-Ford, etc.) in Rust. It supports loading from OSM data, or from a SQL database (at the moment, Postgres). The application was primarily created to have a flexible routing algorithm for electric vehicles (where distance and duration are equally important as energy use). If we want to compute the energy requirements along a certain route, its edge weights can become negative, which prevents the use of many graph routing algorithms such as Djikstra.
+A routing system (using algorithms such as Djikstra, A*, Bellman-Ford, etc.) in Rust. It supports loading from OSM data, or from a SQL database (at the moment, Postgres). The application was primarily created to have a flexible routing algorithm for electric vehicles (where distance and duration are equally important as energy use). If we want to compute the energy requirements along a certain route, its edge weights can become negative, which prevents the use of many graph routing algorithms such as Djikstra.
 
 The Bellman-Ford algorithm was thus originally used for route computation within this application. In the meantime, other routing algorithms have been implemented and it's up to the user to choose an appropriate one.
 
-This `v0.0.1` is not thought to be used in any production environment. It changed a lot from the initial version and is completely untested at the moment.
+This `v0.0.1` is not thought to be used in a production environment (obviously?)! It changed a lot from the initial version and is basically untested at the moment. Also, reachability and route requests take quite some time on large graphs (it uses Bellman-Ford by default...)!
 
 # Installation and Usage
 
@@ -32,23 +32,23 @@ Attention: Make sure to be in the right directory, as the implementation uses th
 
 ## Web Endpoints
 
-Running one of the above commands (either `cargo run` or `cargo build` plus running) sets up a server with the following endpoints (default port 9000):
+Running one of the above commands (either `cargo run` or `cargo build` plus running) sets up a server with the following endpoints (default port 5001):
 
-* [http://127.0.0.1:9000](http://127.0.0.1:9000): Interactive map to showcase routing.
+* [http://127.0.0.1:5001](http://127.0.0.1:5001): Interactive map to showcase routing.
 
-* [/api/route](http://127.0.0.1:9000/api/route): Handles routing requests. Takes the following parameters:
+* [/api/route](http://127.0.0.1:5001/api/route): Handles routing requests. Takes the following parameters:
 
   * `source-lon` (e.g., `=8.545`): The source longitude.
   * `source-lat` (e.g., `=47.407`): The source latitude.
   * `target-lon` (e.g., `=8.531`): The target longitude.
   * `target-lat` (e.g., `=47.366`): The target latitude.
 
-* [/api/route-using-ids](http://127.0.0.1:9000/api/route-using-ids): Handles routing requests, if the node IDs are known:
+* [/api/route-using-ids](http://127.0.0.1:5001/api/route-using-ids): Handles routing requests, if the node IDs are known:
 
   * `source-id` (e.g., `=1`): The source ID.
   * `target-id` (e.g., `=5`): The target ID.
 
-* [/api/reachability](http://127.0.0.1:9000/api/reachability): Computes a reachability graph. Takes the following parameters:
+* [/api/reachability](http://127.0.0.1:5001/api/reachability): Computes a reachability graph. Takes the following parameters:
 
   * `source-lon` (e.g., `=8.545`): The source longitude.
   * `source-lat` (e.g., `=47.407`): The source latitude.
