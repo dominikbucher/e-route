@@ -2,15 +2,19 @@
 
 ![Version](https://img.shields.io/badge/version-v0.0.1-red.svg)
 
-A fast routing system (using algorithms such as Djikstra, A*, Bellman-Ford, etc.) in Rust. It supports loading from OSM data, or from a SQL database (at the moment, Postgres). The application was primarily created to have a flexible routing algorithm for electric vehicles (where distance and duration are equally important as energy use). If we want to compute the energy requirements along a certain route, its edge weights can become negative, which prevents the use of many graph routing algorithms such as Djikstra. 
+A fast routing system (using algorithms such as Djikstra, A*, Bellman-Ford, etc.) in Rust. It supports loading from OSM data, or from a SQL database (at the moment, Postgres). The application was primarily created to have a flexible routing algorithm for electric vehicles (where distance and duration are equally important as energy use). If we want to compute the energy requirements along a certain route, its edge weights can become negative, which prevents the use of many graph routing algorithms such as Djikstra.
 
-The Bellman-Ford algorithm was thus originally used for route computation within this application. In the meantime, other routing algorithms have been implemented and it's up to the user to choose an appropriate one. 
+The Bellman-Ford algorithm was thus originally used for route computation within this application. In the meantime, other routing algorithms have been implemented and it's up to the user to choose an appropriate one.
+
+This `v0.0.1` is not thought to be used in any production environment. It changed a lot from the initial version and is completely untested at the moment.
 
 # Installation and Usage
 
+**Attention**: You need to have [rust-geotiff](https://github.com/dominikbucher/rust-geotiff) cloned into a folder next to the e-routing one for anything below to work! You can check this in the `Cargo.toml` file, where you'll see a `lib` entry specifying this! This will be resolved in the future at some point 😊.
+
 You can run the application directly using `cargo`. Run using one of the following two commands:
 
-```
+```shell
 cargo run build-graph config-file.json
 cargo run run-server config-file.json
 ```
@@ -19,7 +23,7 @@ The first will take an OpenStreetMap file and build a graph from it. The second 
 
 To have a faster-running executable, use the following code to build, and then execute the application (the example is on Windows):
 
-```
+```shell
 cargo build --release
 target\release\bellman_osm.exe build-graph config-file.json
 ```

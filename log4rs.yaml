@@ -1,0 +1,35 @@
+refresh_rate: 30 seconds
+appenders:
+  stdout:
+    kind: console
+  graph:
+    kind: file
+    path: "log/graph.log"
+    encoder:
+      pattern: "{d} - {m}{n}"
+  server:
+    kind: file
+    path: "log/server.log"
+    encoder:
+      pattern: "{d} - {m}{n}"
+root:
+  level: warn
+  appenders:
+    - stdout
+loggers:
+  graph::builder:
+    level: info
+    appenders:
+      - graph
+  graph::reader:
+    level: info
+    appenders:
+      - graph
+  server::builder:
+    level: info
+    appenders:
+      - server
+  server::requests:
+    level: info
+    appenders:
+      - server

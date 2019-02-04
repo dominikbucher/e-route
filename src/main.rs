@@ -23,6 +23,9 @@ extern crate serde_derive;
 extern crate bincode;
 extern crate flate2;
 extern crate gluon;
+#[macro_use]
+extern crate log;
+extern crate log4rs;
 
 use iron::prelude::*;
 use router::Router;
@@ -47,6 +50,8 @@ use rust_geotiff::TIFF;
 
 /// Main function and entry point to the program.
 fn main() {
+    log4rs::init_file("log4rs.yaml", Default::default()).unwrap();
+
     let route_app = App::new("e-Router").version("0.1")
         .author("Dominik Bucher <dominik.bucher@gmail.com>")
         .about("A route calculation package, that focuses on electric mobility.")
@@ -71,19 +76,19 @@ fn main() {
 fn build_graph(settings_map: HashMap<String, String>) -> () {
     // Loading the DEM data.
     let dem_file = settings_map.get("dem_file").unwrap();
-    println!("Reading DEM file from '{}'.", dem_file);
+    info!(target: "graph::builder", "Reading DEM file from '{}'.", dem_file);
     let img = TIFF::open(dem_file).unwrap();
-    println!("Finished reading DEM file.");
+    info!(target: "graph::builder", "Finished reading DEM file.");
 
     // Loading the OSM pbf data.
     let pbf_file = settings_map.get("osm_pbf_file").unwrap();
-    println!("Reading pbf file from '{}'.", pbf_file);
+    info!(target: "graph::builder", "Reading pbf file from '{}'.", pbf_file);
     let pbf_path = std::path::Path::new(pbf_file);
     let pbf_file = std::fs::File::open(&pbf_path).unwrap();
     let mut pbf = osmpbfreader::OsmPbfReader::new(pbf_file);
 
     // Processing data.
-    println!("Starting graph construction.");
+    info!(target: "graph::builder", "Starting graph construction.");
     let count = 1000;
     let mut pb = ProgressBar::new(count);
     pb.format("╢▌▌░╟");
@@ -93,15 +98,15 @@ fn build_graph(settings_map: HashMap<String, String>) -> () {
         &std::path::Path::new(settings_map.get("transport_mode").unwrap()));
 
     let graph = GraphBuilder::build_from_pbf(&mut pbf, &mut script_file.unwrap(), &img);
-    println!("Finished building graph, starting to write to file.");    
+    info!(target: "graph::builder", "Finished building graph, starting to write to file.");    
     let graph_file = settings_map.get("graph_file").unwrap();
     graph.write_to_file(graph_file);
-    println!("Finished graph construction.");
+    info!(target: "graph::builder", "Finished graph construction.");
 }
 
 /// Exposes a graph to a public HTTP endpoint.
 fn run_server(settings_map: HashMap<String, String>) -> () {
-    println!("Running server");
+    info!(target: "server::builder", "Running server");
     // let graph = Graph::new(&args[1]);
     /*let graph = Graph::load_from_db(settings_map.get("db_user").unwrap(),
                                    settings_map.get("db_password").unwrap(),
@@ -112,11 +117,11 @@ fn run_server(settings_map: HashMap<String, String>) -> () {
                                    settings_map.get("db_database").unwrap());*/
 
     let graph_file = settings_map.get("graph_file").unwrap();
-    println!("Reading from {:?}.", graph_file);
+    info!(target: "graph::reader", "Reading from {:?}.", graph_file);
     let serializable_graph = SerializableGraph::read_from_file(graph_file);
-    println!("Finished reading. Building rtree now.");
+    info!(target: "graph::reader", "Finished reading. Building rtree now.");
     let graph = serializable_graph.to_graph();
-    println!("Finished importing graph.");
+    info!(target: "graph::reader", "Finished importing graph.");
 
     // Setting up the router for the web server.
     let mut router = Router::new();
@@ -134,5 +139,5 @@ fn run_server(settings_map: HashMap<String, String>) -> () {
     let address = [settings_map.get("server_host").unwrap().as_str(),
         settings_map.get("server_port").unwrap()].join(":");
     Iron::new(chain).http(&*address).unwrap();
-    print!("Running server on {:?}", address);
+    info!(target: "server::builder", "Running server on {:?}", address);
 }
